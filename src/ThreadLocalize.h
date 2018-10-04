@@ -39,6 +39,7 @@ namespace ohm_tsd_slam
 class SlamNode;
 class ThreadMapping;
 class Localization;
+class OdometryAnalyzer;
 
 
 namespace
@@ -200,27 +201,7 @@ private:
    * odomRescueInit
    * Method to initialize odom recover system
    */
-  void odomRescueInit();
 
-  /**
-   * odomRescueUpdate
-   * updates odometry data if a new scan comes in
-   */
-  void odomRescueUpdate();
-
-  /**
-   * odomRescueCheck
-   * check if slam transformation is plausible and overwrites T with odometry as transformation if not
-   * @param T Transformation matrix to check and correct
-   */
-  void odomRescueCheck(obvious::Matrix& T);
-
-  /**
-   * obviouslyMatrix3x3ToTf
-   * converts an 3x3 obvious matrix to a tf matrix
-   * @param ob Obvious matrix to convert
-   * @return transformed tf matrix
-   */
   tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);
 
   /**
@@ -439,12 +420,7 @@ private:
    */
   tf::StampedTransform _tf;
 
-  /**
-   * Odom Transforms
-   */
-  tf::Transform _tfOdomOld;
-  tf::Transform _tfOdom;
-  tf::Transform _tfRelativeOdom;
+
 
   /**
    * Transform from base footprint to laser
