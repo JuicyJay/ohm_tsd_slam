@@ -9,6 +9,7 @@
 #define THREADLOCALIZE_H_
 
 #include "ThreadSLAM.h"
+#include "OdometryAnalyzer.h"
 
 #include <sensor_msgs/LaserScan.h>
 #include <ros/ros.h>
@@ -197,10 +198,6 @@ private:
   void reduceResolution(bool* const maskIn, obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
-  /**
-   * odomRescueInit
-   * Method to initialize odom recover system
-   */
 
   tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);
 
@@ -221,6 +218,11 @@ private:
    * Pointer to mapping thread
    */
   ThreadMapping& _mapper;
+
+  /**
+   * Pointer to odometry analyzer
+   */
+  OdometryAnalyzer* _odomAnalyzer;
 
   /**
    * Sensor container for handeling the current laser input and pose

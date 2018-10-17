@@ -45,6 +45,11 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 {
   ros::NodeHandle prvNh("~");
 
+  _odomAnalyzer = NULL;
+
+
+  ThreadLocalize* threadLocalize = NULL;
+
 
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
   _nameSpace = nameSpace;
@@ -230,7 +235,7 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     this->init(*scanCopy);
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
 
-    if(_useOdomRescue) odomRescueInit();
+    if(_useOdomRescue) _odomAnalyzer->odomRescueInit();
 
     _stampLaserOld = scan.header.stamp;
   }
@@ -307,7 +312,7 @@ void ThreadLocalize::eventLoop(void)
     _dataMutex.unlock();
 
     //odom rescue
-    if(_useOdomRescue) odomRescueUpdate();
+    if(_useOdomRescue) _odomAnalyzer->odomRescueUpdate();
 
     const unsigned int measurementSize = _sensor->getRealMeasurementSize();
 
@@ -500,7 +505,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   _icp->iterate(&rms, &pairs, &it, &T44);
   T = _icp->getFinalTransformation();
   
-  if(_useOdomRescue && _odomTfIsValid) odomRescueCheck(T);
+  if(_useOdomRescue && _odomTfIsValid) _odomAnalyzer->odomRescueCheck(T);
   
   return T;
 }

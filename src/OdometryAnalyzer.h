@@ -10,6 +10,8 @@
 
 #include <ros/ros.h>
 
+#include "ThreadLocalize.h"
+#include "obvision/reconstruct/grid/TsdGrid.h"
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
@@ -21,11 +23,10 @@ namespace ohm_tsd_slam {
 
 class OdometryAnalyzer {
 public:
-	OdometryAnalyzer();
+	OdometryAnalyzer(obvious::TsdGrid* grid);
 	virtual ~OdometryAnalyzer();
 
-private:
-  void odomRescueInit();
+	void odomRescueInit();
 
   /**
    * odomRescueUpdate
@@ -47,48 +48,87 @@ private:
    * @return transformed tf matrix
    */
 
-  /**
-    * Ros tf interface
-    */
-  tf::TransformBroadcaster _tfBroadcaster;
+private:
+
+  obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf);
+
   tf::TransformListener _tfListener;
 
+  //Container for reading tfs
+  tf::StampedTransform _tfReader;
 
-  /**
-     * Odom Transforms
-     */
-  tf::Transform _tfOdomOld;
-  tf::Transform _tfOdom;
-  tf::Transform _tfRelativeOdom;
-
-  /**
-   * ros tf frame ids
-   */
+  //ros tf frame ids
   std::string _tfFootprintFrameId;
   std::string _tfOdomFrameId;
   std::string _tfBaseFrameId;
   std::string _tfChildFrameId;
 
-  /**
-   * use odom rescue flag
-   */
-  bool _useOdomRescue;
+  //Transform from base footprint to laser
+  tf::Transform _tfLaser;
 
-  /**
-   * state of the actual odom tf
-   */
-  bool _odomTfIsValid;
+  //Odom Transforms
+  tf::Transform _tfOdomOld;
+  tf::Transform _tfOdom;
+  tf::Transform _tfRelativeOdom;
 
-  /**
-   * time to wait for synced odom tf
-   */
-  ros::Duration _waitForOdomTf;
-
-  /**
-   * Laser time stamps
-   */
+  //Laser time stamps
   ros::Time _stampLaser;
   ros::Time _stampLaserOld;
+
+  //state of the actual odom tf
+  bool _odomTfIsValid;
+
+  //time to wait for synced odom tf
+  ros::Duration _waitForOdomTf;
+
+  obvious::TsdGrid& _grid;
+
+  //ICP translation threshold
+   double _trnsMax;
+   double _trnsVelocityMax;
+
+   //ICP rotation threshold
+   double _rotMax;
+   double _rotVelocityMax;
+
+/*
+
+  *
+     * Pointer to main NodeHandle
+
+    ros::NodeHandle* _nh;
+
+  *
+   * Pointer to mapping thread
+
+  ThreadMapping& _mapper;
+
+  *
+   * namespace for all topics and services
+
+  std::string _nameSpace;
+
+
+  *
+   * ICP rotation threshold
+
+  double _rotMax;
+  double _rotVelocityMax;
+
+  *
+    * Ros tf interface
+
+  tf::TransformBroadcaster _tfBroadcaster;
+  *
+   * use odom rescue flag
+
+  bool _useOdomRescue;
+
+  *
+   * Laser time stamps
+
+  ros::Time _stampLaser;
+  ros::Time _stampLaserOld;*/
 };
 
 } /* namespace ohm_tsd_slam */

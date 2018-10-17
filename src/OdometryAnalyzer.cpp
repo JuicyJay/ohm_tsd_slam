@@ -7,13 +7,37 @@
 
 #include "OdometryAnalyzer.h"
 
-
+#include <geometry_msgs/PoseStamped.h>
+#include <tf/tf.h>
 
 namespace ohm_tsd_slam {
 
-OdometryAnalyzer::OdometryAnalyzer() {
+OdometryAnalyzer::OdometryAnalyzer(obvious::TsdGrid* grid):
+		                    _grid(*grid),
+		                    _stampLaser(ros::Time::now())
+
+{
 	// TODO Auto-generated constructor stub
 
+	ros::NodeHandle prvNh("~");
+	  	// use odeom rescue?
+	  	//prvNh.param<bool>("use_odom_rescue", _useOdomRescue, false);
+		// Aufruf OdometryAnalyzer soll in zukunft über funktionsaufruf aus ThreadLocalize geschehen
+		//klären wie und was
+
+	  // odom rescue
+	  double duration;
+	  prvNh.param<double>("wait_for_odom_tf", duration, 1.0);
+	  _waitForOdomTf = ros::Duration(duration);
+	  _odomTfIsValid = false;
+
+	  //Maximum allowed offset between to aligned scans
+	   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
+	   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
+
+	   //Maximum robot speed at footprint frame
+	   prvNh.param<double>("max_velocity_rot", _rotVelocityMax, ROT_VEL_MAX);
+	   prvNh.param<double>("max_velocity_lin", _trnsVelocityMax, TRNS_VEL_MAX);
 }
 
 OdometryAnalyzer::~OdometryAnalyzer() {
@@ -44,7 +68,7 @@ void OdometryAnalyzer::odomRescueInit()
     _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, ros::Time(0), ros::Duration(10.0));
     _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, ros::Time(0), _tfReader);
   }
-  catch(tf::TransformException ex)
+  catch(tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
@@ -64,7 +88,7 @@ void OdometryAnalyzer::odomRescueUpdate()
     _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _waitForOdomTf);
     _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _tfReader);
   }
-  catch(tf::TransformException ex)
+  catch(tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     _odomTfIsValid = false;
@@ -97,13 +121,12 @@ void OdometryAnalyzer::odomRescueCheck(obvious::Matrix& T_slam)
 
   double drot = abs(asin(T_laserOnBaseFootprint(0,1))); // dont use acos here --> missing sign
 
-  double vrot = drot / dt;
   double vtrans = dtrans / dt;
 
   // use odom instead of slam if slam translation is impossible for robot
   if(dtrans > _grid.getCellSize() * 2.0)
   {
-    if(vrot > _rotVelocityMax || vtrans > _trnsVelocityMax)
+    if(drot > _rotVelocityMax || vtrans > _trnsVelocityMax)
     {
       ROS_INFO("-----ODOM-RECOVER-----");
 
@@ -115,5 +138,24 @@ void OdometryAnalyzer::odomRescueCheck(obvious::Matrix& T_slam)
   }
 }
 
+obvious::Matrix OdometryAnalyzer::tfToObviouslyMatrix3x3(const tf::Transform& tf)
+{
+  obvious::Matrix ob(3,3);
+  ob.setIdentity();
+
+  double theta = tf::getYaw(tf.getRotation());
+  double x = tf.getOrigin().getX();
+  double y = tf.getOrigin().getY();
+
+  // problem with sin() returns -0.0 (avoid with +0.0)
+  ob(0, 0) = cos(theta) + 0.0;
+  ob(0, 1) = -sin(theta) + 0.0;
+  ob(0, 2) = x + 0.0;
+  ob(1, 0) = sin(theta) + 0.0;
+  ob(1, 1) = cos(theta) + 0.0;
+  ob(1, 2) = y + 0.0;
+
+  return ob;
+}
 
 } /* namespace ohm_tsd_slam */
